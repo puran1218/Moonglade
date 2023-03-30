@@ -1,17 +1,18 @@
-﻿using System;
-using System.Linq.Expressions;
-using System.Threading.Tasks;
 using Moonglade.Data;
 using Moonglade.Data.Entities;
 using Moonglade.Data.Infrastructure;
 using Moonglade.FriendLink;
 using Moq;
 using NUnit.Framework;
+using System;
+using System.Linq.Expressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Moonglade.Core.Tests
 {
     [TestFixture]
-    public class FriendLinkServiceTests
+    public class FriendLinkHandlersTests
     {
         private MockRepository _mockRepository;
         private Mock<IBlogAudit> _mockBlogAudit;
@@ -25,16 +26,11 @@ namespace Moonglade.Core.Tests
             _mockFriendlinkRepo = _mockRepository.Create<IRepository<FriendLinkEntity>>();
         }
 
-        private FriendLinkService CreateService()
-        {
-            return new(_mockFriendlinkRepo.Object, _mockBlogAudit.Object);
-        }
-
         [Test]
         public async Task GetAsync_OK()
         {
-            var svc = CreateService();
-            await svc.GetAsync(Guid.Empty);
+            var handler = new GetLinkQueryHandler(_mockFriendlinkRepo.Object);
+            await handler.Handle(new(Guid.Empty), CancellationToken.None);
 
             _mockFriendlinkRepo.Verify(p =>
                 p.SelectFirstOrDefaultAsync(It.IsAny<ISpecification<FriendLinkEntity>>(),
@@ -44,8 +40,8 @@ namespace Moonglade.Core.Tests
         [Test]
         public async Task GetAllAsync_OK()
         {
-            var svc = CreateService();
-            await svc.GetAllAsync();
+            var handler = new GetAllLinksQueryHandler(_mockFriendlinkRepo.Object);
+            await handler.Handle(new(), CancellationToken.None);
 
             _mockFriendlinkRepo.Verify(p => p.SelectAsync(It.IsAny<Expression<Func<FriendLinkEntity, Link>>>()));
         }
@@ -53,10 +49,15 @@ namespace Moonglade.Core.Tests
         [Test]
         public void AddAsync_InvalidUrl()
         {
-            var svc = CreateService();
+            var handler = new AddLinkCommandHandler(_mockFriendlinkRepo.Object, _mockBlogAudit.Object);
+
             Assert.ThrowsAsync<InvalidOperationException>(async () =>
             {
-                await svc.AddAsync("Fubao", "work006");
+                await handler.Handle(new(new()
+                {
+                    LinkUrl = "Fubao",
+                    Title = "work006"
+                }), CancellationToken.None);
             });
         }
 
@@ -75,16 +76,21 @@ namespace Moonglade.Core.Tests
 
             _mockFriendlinkRepo.Setup(p => p.AddAsync(It.IsAny<FriendLinkEntity>())).Returns(tcs.Task);
 
-            var svc = CreateService();
-            await svc.AddAsync("Choice of 955", "https://dot.net");
+            var handler = new AddLinkCommandHandler(_mockFriendlinkRepo.Object, _mockBlogAudit.Object);
+            await handler.Handle(new(new()
+            {
+                LinkUrl = "https://dot.net",
+                Title = "Choice of 955"
+            }), CancellationToken.None);
+
             Assert.Pass();
         }
 
         [Test]
         public async Task DeleteAsync_OK()
         {
-            var svc = CreateService();
-            await svc.DeleteAsync(Guid.Empty);
+            var handler = new DeleteLinkCommandHandler(_mockFriendlinkRepo.Object, _mockBlogAudit.Object);
+            await handler.Handle(new(Guid.Empty), CancellationToken.None);
 
             _mockBlogAudit.Verify();
             Assert.Pass();
@@ -93,10 +99,15 @@ namespace Moonglade.Core.Tests
         [Test]
         public void UpdateAsync_InvalidUrl()
         {
-            var svc = CreateService();
+            var handler = new UpdateLinkCommandHandler(_mockFriendlinkRepo.Object, _mockBlogAudit.Object);
+
             Assert.ThrowsAsync<InvalidOperationException>(async () =>
             {
-                await svc.UpdateAsync(Guid.Empty, "Fubao", "work006");
+                await handler.Handle(new(Guid.Empty, new()
+                {
+                    LinkUrl = "Fubao",
+                    Title = "work006"
+                }), default);
             });
         }
 
@@ -105,8 +116,12 @@ namespace Moonglade.Core.Tests
         {
             _mockFriendlinkRepo.Setup(p => p.GetAsync(It.IsAny<Guid>()));
 
-            var svc = CreateService();
-            await svc.UpdateAsync(Guid.Empty, "work", "https://996.icu");
+            var handler = new UpdateLinkCommandHandler(_mockFriendlinkRepo.Object, _mockBlogAudit.Object);
+            await handler.Handle(new(Guid.Empty, new()
+            {
+                LinkUrl = "https://996.icu",
+                Title = "work"
+            }), default);
 
             _mockFriendlinkRepo.Verify(p => p.UpdateAsync(It.IsAny<FriendLinkEntity>()), Times.Never);
         }
@@ -121,8 +136,12 @@ namespace Moonglade.Core.Tests
                 Title = "Choice of 955"
             }));
 
-            var svc = CreateService();
-            await svc.UpdateAsync(Guid.Empty, "work", "https://996.icu");
+            var handler = new UpdateLinkCommandHandler(_mockFriendlinkRepo.Object, _mockBlogAudit.Object);
+            await handler.Handle(new(Guid.Empty, new()
+            {
+                LinkUrl = "https://996.icu",
+                Title = "work"
+            }), default);
 
             _mockFriendlinkRepo.Verify(p => p.UpdateAsync(It.IsAny<FriendLinkEntity>()));
             _mockBlogAudit.Verify(p => p.AddEntry(BlogEventType.Content, BlogEventId.FriendLinkUpdated, It.IsAny<string>()));

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Edi.ImageWatermark;
+﻿using Edi.ImageWatermark;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +9,11 @@ using Moonglade.Configuration;
 using Moonglade.Configuration.Settings;
 using Moonglade.ImageStorage;
 using Moonglade.Utils;
+using System;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Moonglade.Web.Controllers
 {
@@ -62,9 +62,9 @@ namespace Moonglade.Web.Controllers
 
             _logger.LogTrace($"Requesting image file {filename}");
 
-            if (_blogConfig.AdvancedSettings.EnableCDNRedirect)
+            if (_blogConfig.ImageSettings.EnableCDNRedirect)
             {
-                var imageUrl = _blogConfig.AdvancedSettings.CDNEndpoint.CombineUrl(filename);
+                var imageUrl = _blogConfig.ImageSettings.CDNEndpoint.CombineUrl(filename);
                 return Redirect(imageUrl);
             }
 
@@ -123,7 +123,7 @@ namespace Moonglade.Web.Controllers
 
             // Add watermark
             MemoryStream watermarkedStream = null;
-            if (_blogConfig.WatermarkSettings.IsEnabled && !skipWatermark)
+            if (_blogConfig.ImageSettings.IsWatermarkEnabled && !skipWatermark)
             {
                 if (null == _imageStorageSettings.Watermark.NoWatermarkExtensions
                     || _imageStorageSettings.Watermark.NoWatermarkExtensions.All(
@@ -145,11 +145,11 @@ namespace Moonglade.Web.Controllers
                     }
 
                     watermarkedStream = watermarker.AddWatermark(
-                        _blogConfig.WatermarkSettings.WatermarkText,
+                        _blogConfig.ImageSettings.WatermarkText,
                         Color.FromArgb(colorArray[0], colorArray[1], colorArray[2], colorArray[3]),
                         WatermarkPosition.BottomRight,
                         15,
-                        _blogConfig.WatermarkSettings.FontSize);
+                        _blogConfig.ImageSettings.WatermarkFontSize);
                 }
                 else
                 {
@@ -162,7 +162,7 @@ namespace Moonglade.Web.Controllers
                     watermarkedStream.ToArray() :
                     stream.ToArray());
 
-            if (_blogConfig.WatermarkSettings.KeepOriginImage)
+            if (_blogConfig.ImageSettings.KeepOriginImage)
             {
                 var arr = stream.ToArray();
                 _ = Task.Run(async () => await _imageStorage.InsertAsync(secondaryFieName, arr));

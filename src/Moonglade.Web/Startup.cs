@@ -1,13 +1,8 @@
-﻿#region Usings
+#region Usings
 
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text.Encodings.Web;
-using System.Text.Unicode;
 using AspNetCoreRateLimit;
 using Edi.Captcha;
+using MediatR;
 using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
@@ -29,7 +24,6 @@ using Moonglade.Configuration.Settings;
 using Moonglade.Core;
 using Moonglade.Data;
 using Moonglade.Data.Porting;
-using Moonglade.FriendLink;
 using Moonglade.ImageStorage;
 using Moonglade.Menus;
 using Moonglade.Notification.Client;
@@ -39,6 +33,12 @@ using Moonglade.Theme;
 using Moonglade.Web.Configuration;
 using Moonglade.Web.Filters;
 using Moonglade.Web.Middleware;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
 using WilderMinds.MetaWeblog;
 
 #endregion
@@ -66,6 +66,9 @@ namespace Moonglade.Web
 
         public void ConfigureServices(IServiceCollection services)
         {
+            AppDomain.CurrentDomain.Load("Moonglade.FriendLink");
+            services.AddMediatR(AppDomain.CurrentDomain.GetAssemblies());
+
             // ASP.NET Setup
             services.AddOptions()
                     .AddHttpContextAccessor()
@@ -131,6 +134,8 @@ namespace Moonglade.Web
                 options.AppendTrailingSlash = false;
             });
 
+            services.AddHealthChecks();
+
             // Blog Services
             services.AddCoreBloggingServices()
                     .AddPingback()
@@ -141,7 +146,6 @@ namespace Moonglade.Web
                     .AddBlogTheme()
                     .AddMetaWeblog<MetaWeblogService>()
                     .AddScoped<IMenuService, MenuService>()
-                    .AddScoped<IFriendLinkService, FriendLinkService>()
                     .AddScoped<IFoafWriter, FoafWriter>()
                     .AddScoped<IExportManager, ExportManager>()
                     .AddScoped<ValidateCaptcha>()

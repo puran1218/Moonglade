@@ -117,19 +117,13 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Enabled Watermark" xml:space="preserve">
-    <value>启用水印</value>
+  <data name="General" xml:space="preserve">
+    <value>常规</value>
   </data>
-  <data name="Font Size" xml:space="preserve">
-    <value>字号</value>
+  <data name="Save" xml:space="preserve">
+    <value>保存</value>
   </data>
-  <data name="Keep Origin Image" xml:space="preserve">
-    <value>保留原图</value>
-  </data>
-  <data name="Watermark Text" xml:space="preserve">
-    <value>水印文字</value>
-  </data>
-  <data name="Please enter watermark text" xml:space="preserve">
-    <value>请输入水印文字</value>
+  <data name="Watermark" xml:space="preserve">
+    <value>水印</value>
   </data>
 </root>

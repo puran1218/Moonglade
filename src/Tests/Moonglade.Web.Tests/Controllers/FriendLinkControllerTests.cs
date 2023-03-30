@@ -1,11 +1,11 @@
-using System;
-using System.Threading.Tasks;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Moonglade.FriendLink;
 using Moonglade.Web.Controllers;
-using Moonglade.Web.Models;
 using Moq;
 using NUnit.Framework;
+using System;
+using System.Threading.Tasks;
 
 namespace Moonglade.Web.Tests.Controllers
 {
@@ -14,9 +14,9 @@ namespace Moonglade.Web.Tests.Controllers
     {
         private MockRepository _mockRepository;
 
-        private Mock<IFriendLinkService> _mockFriendLinkService;
+        private Mock<IMediator> _mockMediator;
 
-        private FriendLinkEditModel _friendlinkEditViewModel = new()
+        private readonly FriendLinkEditModel _friendlinkEditViewModel = new()
         {
             LinkUrl = FakeData.Url1,
             Title = "996 ICU"
@@ -27,12 +27,12 @@ namespace Moonglade.Web.Tests.Controllers
         {
             _mockRepository = new(MockBehavior.Default);
 
-            _mockFriendLinkService = _mockRepository.Create<IFriendLinkService>();
+            _mockMediator = _mockRepository.Create<IMediator>();
         }
 
         private FriendLinkController CreateFriendLinkController()
         {
-            return new(_mockFriendLinkService.Object);
+            return new(_mockMediator.Object);
         }
 
         [Test]
@@ -43,13 +43,13 @@ namespace Moonglade.Web.Tests.Controllers
             var result = await ctl.Create(_friendlinkEditViewModel);
 
             Assert.IsInstanceOf<CreatedResult>(result);
-            _mockFriendLinkService.Verify(p => p.AddAsync(It.IsAny<string>(), It.IsAny<string>()));
+            _mockMediator.Verify(p => p.Send(It.IsAny<AddLinkCommand>(), default));
         }
 
         [Test]
         public async Task Get_LinkNull()
         {
-            _mockFriendLinkService.Setup(p => p.GetAsync(Guid.Empty)).Returns(Task.FromResult((Link)null));
+            _mockMediator.Setup(p => p.Send(new GetLinkQuery(Guid.Empty), default)).Returns(Task.FromResult((Link)null));
             var ctl = CreateFriendLinkController();
             var result = await ctl.Get(Guid.Empty);
 
@@ -59,7 +59,7 @@ namespace Moonglade.Web.Tests.Controllers
         [Test]
         public async Task Get_OK()
         {
-            _mockFriendLinkService.Setup(p => p.GetAsync(FakeData.Uid1)).Returns(Task.FromResult(new Link()));
+            _mockMediator.Setup(p => p.Send(It.IsAny<GetLinkQuery>(), default)).Returns(Task.FromResult(new Link()));
             var ctl = CreateFriendLinkController();
             var result = await ctl.Get(FakeData.Uid1);
 
@@ -74,7 +74,7 @@ namespace Moonglade.Web.Tests.Controllers
             var result = await ctl.Update(FakeData.Uid1, _friendlinkEditViewModel);
 
             Assert.IsInstanceOf<NoContentResult>(result);
-            _mockFriendLinkService.Verify(p => p.UpdateAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>()));
+            _mockMediator.Verify(p => p.Send(It.IsAny<UpdateLinkCommand>(), default));
         }
 
         [Test]
@@ -84,7 +84,7 @@ namespace Moonglade.Web.Tests.Controllers
             var result = await ctl.Delete(FakeData.Uid1);
 
             Assert.IsInstanceOf<NoContentResult>(result);
-            _mockFriendLinkService.Verify(p => p.DeleteAsync(It.IsAny<Guid>()));
+            _mockMediator.Verify(p => p.Send(It.IsAny<DeleteLinkCommand>(), default));
         }
     }
 }

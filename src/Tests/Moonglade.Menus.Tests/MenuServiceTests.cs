@@ -1,13 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Moonglade.Data;
 using Moonglade.Data.Entities;
 using Moonglade.Data.Infrastructure;
 using Moq;
 using NUnit.Framework;
+using System;
+using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Threading.Tasks;
 
 namespace Moonglade.Menus.Tests
 {
@@ -65,8 +65,8 @@ namespace Moonglade.Menus.Tests
             _mockMenuRepository.Setup(p => p.GetAsync(It.IsAny<Guid>()))
                 .Returns(ValueTask.FromResult((MenuEntity)null));
 
-            var ctl = CreateService();
-            var result = await ctl.GetAsync(Guid.Empty);
+            var handler = new GetMenuQueryHandler(_mockMenuRepository.Object);
+            var result = await handler.Handle(new(Guid.Empty), default);
 
             Assert.IsNull(result);
         }
@@ -74,8 +74,8 @@ namespace Moonglade.Menus.Tests
         [Test]
         public async Task GetAllAsync_OK()
         {
-            var ctl = CreateService();
-            await ctl.GetAllAsync();
+            var handler = new GetAllMenusQueryHandler(_mockMenuRepository.Object);
+            var result = await handler.Handle(new(), default);
 
             _mockMenuRepository.Verify(p => p.SelectAsync(It.IsAny<Expression<Func<MenuEntity, Menu>>>()));
         }
@@ -86,8 +86,8 @@ namespace Moonglade.Menus.Tests
             _mockMenuRepository.Setup(p => p.GetAsync(It.IsAny<Guid>()))
                 .Returns(ValueTask.FromResult(_menu));
 
-            var ctl = CreateService();
-            var result = await ctl.GetAsync(Guid.Empty);
+            var handler = new GetMenuQueryHandler(_mockMenuRepository.Object);
+            var result = await handler.Handle(new(Guid.Empty), default);
 
             Assert.IsNotNull(result);
             Assert.AreEqual("work-996", result.Icon);
@@ -100,11 +100,10 @@ namespace Moonglade.Menus.Tests
             _mockMenuRepository.Setup(p => p.GetAsync(It.IsAny<Guid>()))
                 .Returns(ValueTask.FromResult((MenuEntity)null));
 
-            var ctl = CreateService();
-
+            var handler = new DeleteMenuCommandHandler(_mockMenuRepository.Object, _mockBlogAudit.Object);
             Assert.ThrowsAsync<InvalidOperationException>(async () =>
             {
-                await ctl.DeleteAsync(Guid.Empty);
+                await handler.Handle(new(Guid.Empty), default);
             });
         }
 
@@ -114,8 +113,8 @@ namespace Moonglade.Menus.Tests
             _mockMenuRepository.Setup(p => p.GetAsync(It.IsAny<Guid>()))
                 .Returns(ValueTask.FromResult(_menu));
 
-            var ctl = CreateService();
-            await ctl.DeleteAsync(Guid.Empty);
+            var handler = new DeleteMenuCommandHandler(_mockMenuRepository.Object, _mockBlogAudit.Object);
+            await handler.Handle(new(Guid.Empty), default);
 
             _mockBlogAudit.Verify();
         }
@@ -123,8 +122,9 @@ namespace Moonglade.Menus.Tests
         [Test]
         public async Task CreateAsync_OK()
         {
-            var svc = CreateService();
-            var result = await svc.CreateAsync(new()
+            var handler = new CreateMenuCommandHandler(_mockMenuRepository.Object, _mockBlogAudit.Object);
+
+            var result = await handler.Handle(new(new()
             {
                 DisplayOrder = 996,
                 Icon = "work-996",
@@ -140,7 +140,7 @@ namespace Moonglade.Menus.Tests
                         Url = "https://251.today"
                     }
                 }
-            });
+            }), default);
 
             Assert.AreNotEqual(Guid.Empty, result);
             _mockBlogAudit.Verify(p => p.AddEntry(BlogEventType.Content, BlogEventId.MenuCreated, It.IsAny<string>()));
